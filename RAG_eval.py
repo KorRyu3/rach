@@ -78,7 +78,8 @@ def wait_for_index_to_be_ready(vsc, vs_endpoint_name, index_name):
 
 def create_index(vsc, vector_search_index_name):
   # embeddingモデル名
-  embedding_endpoint_name = "databricks-gte-large-en"
+  # embedding_endpoint_name = "databricks-gte-large-en"
+  embedding_endpoint_name = "multilingual-e5-large-embedding"
   source_table_name = f"{catalog}.{db}.{embed_table_name}"
 
   #インデックスを新規作成
@@ -89,7 +90,7 @@ def create_index(vsc, vector_search_index_name):
   pipeline_type="TRIGGERED",
   source_table_name=source_table_name,
   primary_key="id",
-  embedding_source_column="response",
+  embedding_source_column="content",
   embedding_model_endpoint_name=embedding_endpoint_name
   )
 

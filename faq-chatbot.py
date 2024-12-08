@@ -46,11 +46,17 @@ import re
 
 # COMMAND ----------
 
+from httpx import Timeout
+import time
+
 def get_soup(url):
-    html = httpx.get(url)
-    # 200か300番台はOK
-    if html.status_code < 200 or html.status_code >= 400:
-        raise Exception(f"Failed to get {url}, status code: {html.status_code}")
+    with httpx.Client() as client:
+        # ReadTimeoutが起きることがあるので、情報取得のタイムアウトを10sにする
+        timeout = Timeout(5.0, read=10.0)
+        html = client.get(url, timeout=timeout)
+    if html.status_code != 200:
+        print(f"Failed to get {url}")
+        html.raise_for_status()
     return BeautifulSoup(html.content, "html.parser")
 
 # COMMAND ----------
@@ -460,7 +466,8 @@ if index_exists(vsc, VECTOR_SEARCH_ENDPOINT_NAME, vs_index_fullname):
       break
 
 # embeddingモデル名
-embedding_endpoint_name = "databricks-gte-large-en"
+# embedding_endpoint_name = "databricks-gte-large-en"
+embedding_endpoint_name = "multilingual-e5-large-embedding"
 
 #インデックスを新規作成
 print(f"Creating index {vs_index_fullname} on endpoint {VECTOR_SEARCH_ENDPOINT_NAME}...")
@@ -505,7 +512,7 @@ vs_index = vsc.get_index(VECTOR_SEARCH_ENDPOINT_NAME, vs_index_fullname)
 results = vs_index.similarity_search(
   query_text="授業時間は一コマどのくらいですか？",
   columns=["url", "content"],
-  num_results=10  # 上位三つの結果を返す
+  num_results=10,  # 上位三つの結果を返す
 )
 docs = results.get('result', {}).get('data_array', [])
 docs
