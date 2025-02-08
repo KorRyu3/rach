@@ -63,20 +63,30 @@ uc_model_info = mlflow.register_model(model_uri=logged_chain_info.model_uri, nam
 # COMMAND ----------
 
 import mlflow
-import pandas as pd
+import json
+
 exsample_eval_set  = [
-    {
-      "request_id": "1",
-      "request": "AO入学はありますか？",  # question
-      "expected_response": "はい、あります！AO入学制度は、学力試験だけでは評価できない個性や意欲を重視した入学選考方法です。"  # 模範解答
-    },
+  {
+    "request_id": "1",
+    "request": "AO入学はありますか？",  # question
+    "expected_facts": [
+      "AO入学はあります",
+    ],
+  },
 ]
 
-#### Convert dictionary to a pandas DataFrame
-csv_path = "eval-dataset.csv"
-eval_set_df = pd.read_csv(csv_path)
+json_path = "eval-dataset.json"
+with open(json_path, "r") as f:
+  tmp_eval_dataset_list = json.load(f)
 
-eval_set_df["request_id"] = eval_set_df["request_id"].astype(str)  # 文字列じゃないとエラー出る
+eval_dataset_list = []
+for i, tmp_eval_dataset_dict in enumerate(tmp_eval_dataset_list, start=1):
+  eval_dataset_dict = {
+    "request": tmp_eval_dataset_dict["request"],
+    "expected_facts": tmp_eval_dataset_dict["expected_facts"],
+    "request_id": str(i)
+  }
+  eval_dataset_list.append(eval_dataset_dict)
 
 model_name = f"{catalog}.{dbName}.{registered_model_name}"
 
@@ -86,7 +96,7 @@ model_name = f"{catalog}.{dbName}.{registered_model_name}"
 # with mlflow.start_run(run_id=logged_chain_info.run_id):
 with mlflow.start_run(run_name="new_eval_run"):
   evaluation_results = mlflow.evaluate(
-      data=eval_set_df,
+      data=eval_dataset_list,
       # data=exsample_eval_set,
       model=f"models:/{model_name}/{uc_model_info.version}",
       model_type="databricks-agent",
